@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /home/razvan/SemanticSeg/TV3S/upstream/utils/models/dinov3*)",
+      "Bash(ls /home/razvan/SemanticSeg/TV3S/upstream/*.py)"
+    ]
+  }
+}
