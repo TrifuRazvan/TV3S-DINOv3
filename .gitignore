@@ -1,0 +1,35 @@
+# Datasets and large files
+upstream/data/
+upstream/pretrained/
+upstream/work_dirs/
+upstream/results/
+upstream/plots/
+
+# Model checkpoints and predictions
+*.pth
+*.pkl
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg/
+.eggs/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Temp / local helper files
+tmp/
+*.tmp
+paste.txt
+commands.txt
