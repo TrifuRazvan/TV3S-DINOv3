@@ -70,7 +70,7 @@ def parse_args():
         help='choose different vaidation mode [0=normal, 1=1Frame, 2=1Frame+Greedy+Seq, 3=1Frame+Greedy+Batched]')
     
     # Argument to customize the Dilation for the dataset
-    parser.add_argument(
+    parser.add_argument(  
         '--dilation',
         type=int,
         default=-1,
@@ -149,10 +149,11 @@ def main():
     
     # Important to set for mamba eval
     cfg.data.test.mamba_mode = args.mode > 0
-    cfg.model.decode_head.decoder_params.test_mode = True
-    cfg.model.decode_head.decoder_params.val_mode = args.mode
+    if hasattr(cfg.model.decode_head, 'decoder_params'):
+        cfg.model.decode_head.decoder_params.test_mode = True
+        cfg.model.decode_head.decoder_params.val_mode = args.mode
 
-    if args.mode > 0: 
+    if args.mode > 0:
         cfg.model.decode_head.num_clips = 1
 
     # init distributed env first, since logger depends on the dist info.
@@ -200,6 +201,7 @@ def main():
     rank, _ = get_dist_info()
     if rank == 0:
         if args.out:
+            os.makedirs(os.path.dirname(args.out), exist_ok=True)
             print(f'\nwriting results to {args.out}')
             mmcv.dump(outputs, args.out)
             print(f'✓ Results saved to {args.out}')

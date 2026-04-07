@@ -145,7 +145,6 @@ class EncoderDecoder_clips(BaseSegmentor):
     def forward_dummy(self, img):
         """Dummy forward function."""
         assert img.shape[0]==1
-        import ipdb;ipdb.set_trace()
         img = torch.concat((img,img,img,img),0)
         seg_logit = self.encode_decode(img, None,1,4)
 

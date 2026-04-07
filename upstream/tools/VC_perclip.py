@@ -128,7 +128,8 @@ for video in videolist:
         continue
         
 
-    if len(images)<=clip_num:
+    skip = 0
+    if len(images) <= clip_num + skip:
         print("here: ", video)
         continue
     for imgname in images:
@@ -152,9 +153,9 @@ for video in videolist:
     
     if evaluator_video.Mean_Intersection_over_Union()>0.7:
         good_video.append(video)
-    accs = get_common(imglist,predlist,clip_num,h,w)
+    accs = get_common(imglist[skip:],predlist[skip:],clip_num,h,w)
     print(video,sum(accs)/len(accs))
-    accs_8 = get_common(imglist,predlist,clip_num_8,h,w)
+    accs_8 = get_common(imglist[skip:],predlist[skip:],clip_num_8,h,w)
     print(sum(accs_8)/len(accs_8))
     total_acc.extend(accs)
     total_acc_8.extend(accs_8)

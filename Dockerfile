@@ -63,7 +63,7 @@ RUN micromamba run -n tv3s pip install \
         mmsegmentation==0.11.0 \
         mmengine==0.10.7 \
         huggingface_hub \
-        transformers==4.38.2 \
+        transformers==4.57.6 \
         ninja
 
 # Temporary clone of TV3S just for building 3rdparty deps
@@ -77,17 +77,38 @@ RUN cd /opt/TV3S_build/3rdparty/mmcv && \
     MMCV_WITH_OPS=1 micromamba run -n tv3s \
         python -m pip install -v -e . --no-build-isolation
 
-# Build causal-conv1d (CUDA extension)
+# Build causal-conv1d (CUDA extension) — v1.5.0.post8 as per official TV3S guide
 RUN cd /opt/TV3S_build/3rdparty && \
     git clone https://github.com/Dao-AILab/causal-conv1d.git -b v1.5.0.post8 && \
     cd causal-conv1d && \
     MAX_JOBS=16 micromamba run -n tv3s python setup.py install
 
-# (Optional) Build state-spaces mamba from source as in the original instructions
+# Build mamba v1.0.0 from source as per official TV3S installation guide
 RUN cd /opt/TV3S_build/3rdparty && \
-    git clone --branch v1.2.2 https://github.com/state-spaces/mamba.git && \
+    git clone --branch v1.0.0 https://github.com/state-spaces/mamba.git && \
     cd mamba && \
     micromamba run -n tv3s python setup.py install
+
+# Fix mamba v1.0.0 incompatibility with transformers >= 4.44:
+# mamba_ssm/utils/generation.py imports classes removed from transformers.generation.
+# TV3S never uses mamba's generation utilities (text gen only), so stubbing is safe.
+RUN micromamba run -n tv3s python3 -c "\
+path = '/opt/micromamba/envs/tv3s/lib/python3.10/site-packages/mamba_ssm-1.0.0-py3.10-linux-x86_64.egg/mamba_ssm/utils/generation.py';\
+content = open(path).read();\
+content = content.replace(\
+    'from transformers.generation import GreedySearchDecoderOnlyOutput, SampleDecoderOnlyOutput',\
+    'try:\n    from transformers.generation import GreedySearchDecoderOnlyOutput, SampleDecoderOnlyOutput\nexcept ImportError:\n    GreedySearchDecoderOnlyOutput = None\n    SampleDecoderOnlyOutput = None'\
+);\
+open(path, 'w').write(content)"
+
+# Fix mamba v1.0.0 + causal-conv1d v1.5.0.post8 incompatibility:
+# causal_conv1d_fn added seq_idx/initial_states before activation; patch to use keyword arg.
+RUN sed -i 's/                    self\.activation,/                    activation=self.activation,/' \
+    /opt/micromamba/envs/tv3s/lib/python3.10/site-packages/mamba_ssm-1.0.0-py3.10-linux-x86_64.egg/mamba_ssm/modules/mamba_simple.py
+
+# Fix numpy 1.24+ compatibility in mmseg (np.float/int/bool/complex removed)
+RUN sed -i 's/np\.float\b/float/g; s/np\.int\b/int/g; s/np\.complex\b/complex/g; s/np\.bool\b/bool/g' \
+    /opt/micromamba/envs/tv3s/lib/python3.10/site-packages/mmseg/core/evaluation/metrics.py
 
 # Make tv3s env the default on PATH
 ENV PATH=${MAMBA_ROOT_PREFIX}/envs/tv3s/bin:${PATH}
