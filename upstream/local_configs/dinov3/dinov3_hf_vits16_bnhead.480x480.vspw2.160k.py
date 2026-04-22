@@ -33,7 +33,7 @@ model = dict(
         model_name='facebook/dinov3-vits16-pretrain-lvd1689m',
         pretrained=True,
         out_indices=(3, 6, 9, 11),   # → layers 4, 7, 10, 12 (1-indexed out of 12)
-        freeze_backbone=True,         # ← set True for Phase 2 sanity check
+        freeze_backbone=False,        # ← Phase 3: fine-tune backbone
     ),
     decode_head=dict(
         type='BNHead',
@@ -61,7 +61,7 @@ model = dict(
 optimizer = dict(
     _delete_=True,
     type='AdamW',
-    lr=6e-5,
+    lr=3e-5,
     betas=(0.9, 0.999),
     weight_decay=0.01,
     paramwise_cfg=dict(

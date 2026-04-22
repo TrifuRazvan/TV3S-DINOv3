@@ -159,6 +159,10 @@ def create_block(
     factory_kwargs = {"device": device, "dtype": dtype}
     if ssm_cfg is None:
         ssm_cfg = {}
+    # Disable Mamba's fast path: mamba_ssm 1.0.0's mamba_inner_fn calls
+    # causal_conv1d_fwd with 4 args, but causal_conv1d >=1.2 requires 7.
+    # The slow path uses causal_conv1d_fn (Python wrapper), which is version-safe.
+    ssm_cfg.setdefault('use_fast_path', False)
     # import ipdb;ipdb.set_trace()
     if mamba2:
         mixer_cls = partial(Mamba2, layer_idx=layer_idx, **ssm_cfg, **factory_kwargs)
