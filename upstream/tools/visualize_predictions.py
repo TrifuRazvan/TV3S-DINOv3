@@ -18,6 +18,7 @@ import os
 import numpy as np
 import cv2
 from pathlib import Path
+from PIL import Image
 
 
 # ---------------------------------------------------------------------------
@@ -35,9 +36,8 @@ def build_palette(num_classes=124):
 
 def colorize_mask(mask_path, palette):
     """Load a class-index PNG and convert to BGR image."""
-    mask = np.array(cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE))
-    color = palette[mask.clip(0, len(palette) - 1)]  # (H, W, 3)
-    return color
+    mask = np.array(Image.open(str(mask_path)))
+    return palette[mask.clip(0, len(palette) - 1)]
 
 
 def make_side_by_side(origin_path, gt_path, pred_path, palette, size):
