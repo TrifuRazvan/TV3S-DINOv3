@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=tv3s-train
-#SBATCH --partition=main-gpu
+#SBATCH --partition=main-gpu,itc-gpu
 #SBATCH --gpus=lovelace:2
 #SBATCH --time=24:00:00
 #SBATCH --mem=64G
@@ -11,6 +11,9 @@ module load singularity/3.9.5
 
 export TRANSFORMERS_OFFLINE=1
 export HF_DATASETS_OFFLINE=1
+
+CONFIG=local_configs/dinov3/dinov3_hf_vits16_tv3s_frozen.480x480.vspw2.160k.py
+WORK_DIR=dinov3_vits16_tv3s_frozen_2sample_2gpu_iter160k_lr6e-5
 
 singularity exec --nv \
     --bind /dev/shm:/dev/shm \
