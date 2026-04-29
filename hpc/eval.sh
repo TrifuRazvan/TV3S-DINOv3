@@ -5,7 +5,7 @@
 #SBATCH --time=4:00:00
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=8
-#SBATCH --output=%x_%j.log
+#SBATCH --output=hpc/logs/eval/%x_%j.log
 
 module load singularity/3.9.5
 
@@ -29,7 +29,7 @@ singularity exec --nv \
 
         echo '=== Step 1: Inference + mIoU ==='
         PYTHONPATH=/workspace/TV3S ./tools/dist_test.sh ${CONFIG} ${CHECKPOINT} 1 \
-            --eval mIoU --out ${RESULTS_DIR}/predictions.pkl
+            --eval mIoU --out ${RESULTS_DIR}/predictions.pkl --tmpdir /workspace/TV3S/tmp_inference
 
         echo '=== Step 2: Convert predictions to PNG images ==='
         PYTHONPATH=/workspace/TV3S python3 tools/format_predictions.py \
