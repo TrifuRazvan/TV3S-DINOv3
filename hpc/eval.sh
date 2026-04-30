@@ -13,7 +13,7 @@ export HTTP_PROXY=http://proxy.utwente.nl:3128
 export HTTPS_PROXY=http://proxy.utwente.nl:3128
 
 PORT=$((29500 + SLURM_JOB_ID % 1000))
-TMPDIR=/local/${SLURM_JOB_ID}
+TMPDIR=/local/s2283921/${SLURM_JOB_ID}
 mkdir -p ${TMPDIR}
 trap "rm -rf ${TMPDIR}" EXIT
 
