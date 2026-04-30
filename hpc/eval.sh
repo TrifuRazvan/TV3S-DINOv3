@@ -29,7 +29,7 @@ singularity exec --nv \
 
         echo '=== Step 1: Inference + mIoU ==='
         PYTHONPATH=/workspace/TV3S ./tools/dist_test.sh ${CONFIG} ${CHECKPOINT} 1 \
-            --eval mIoU --out ${RESULTS_DIR}/predictions.pkl --tmpdir /workspace/TV3S/tmp_inference
+            --eval mIoU --out ${RESULTS_DIR}/predictions.pkl --tmpdir /home/s2283921/tmp_inference
 
         echo '=== Step 2: Convert predictions to PNG images ==='
         PYTHONPATH=/workspace/TV3S python3 tools/format_predictions.py \
