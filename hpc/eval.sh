@@ -3,8 +3,8 @@
 #SBATCH --partition=main-gpu,itc-gpu
 #SBATCH --gpus=blackwell:1
 #SBATCH --time=4:00:00
-#SBATCH --mem=32G
-#SBATCH --cpus-per-task=8
+#SBATCH --mem=16G
+#SBATCH --cpus-per-task=4
 #SBATCH --output=hpc/logs/eval/%x_%j.log
 
 module load singularity/3.9.5
