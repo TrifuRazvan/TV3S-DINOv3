@@ -7,6 +7,7 @@ from .swin2 import *
 from .decode_head import *
 from .tv3s_head import *
 from .dinov3_backbone_hf import *
+from .dinov3_convnext_backbone_hf import *
 from .bn_head import *
 
 from .num_parameters import *
