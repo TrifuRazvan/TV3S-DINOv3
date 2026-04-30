@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=tv3s-eval
 #SBATCH --partition=main-gpu,itc-gpu
-#SBATCH --gpus=lovelace:1
+#SBATCH --gpus=blackwell:1
 #SBATCH --time=4:00:00
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=8
@@ -22,7 +22,7 @@ singularity exec --nv \
     --bind /home/s2283921/TV3S-DINOv3/upstream:/workspace/TV3S \
     --bind /home/s2283921/.cache/huggingface:/root/.cache/huggingface \
     --pwd /workspace/TV3S \
-    /home/s2283921/tv3s_sandbox/ \
+    /home/s2283921/tv3s_sandbox_cu128/ \
     bash -c "
         set -e
         mkdir -p ${RESULTS_DIR}/images
