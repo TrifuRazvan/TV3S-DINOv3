@@ -12,6 +12,8 @@ module load singularity/3.9.5
 export HTTP_PROXY=http://proxy.utwente.nl:3128
 export HTTPS_PROXY=http://proxy.utwente.nl:3128
 
+PORT=$((29500 + SLURM_JOB_ID % 1000))
+
 CONFIG=local_configs/dinov3/dinov3_hf_vits16_tv3s_frozen.480x480.vspw2.160k.py
 WORK_DIR=dinov3_vits16_tv3s_frozen_2sample_2gpu_iter160k_lr6e-5
 CHECKPOINT=work_dirs/${WORK_DIR}/iter_160000.pth
