@@ -13,6 +13,9 @@ export HTTP_PROXY=http://proxy.utwente.nl:3128
 export HTTPS_PROXY=http://proxy.utwente.nl:3128
 
 PORT=$((29500 + SLURM_JOB_ID % 1000))
+TMPDIR=/local/${SLURM_JOB_ID}
+mkdir -p ${TMPDIR}
+trap "rm -rf ${TMPDIR}" EXIT
 
 CONFIG=local_configs/dinov3/dinov3_hf_vits16_tv3s_frozen.480x480.vspw2.160k.py
 WORK_DIR=dinov3_vits16_tv3s_frozen_2sample_2gpu_iter160k_lr6e-5
@@ -23,17 +26,16 @@ singularity exec --nv \
     --bind /dev/shm:/dev/shm \
     --bind /home/s2283921/TV3S-DINOv3/upstream:/workspace/TV3S \
     --bind /home/s2283921/.cache/huggingface:/root/.cache/huggingface \
+    --bind ${TMPDIR}:${TMPDIR} \
     --pwd /workspace/TV3S \
     /home/s2283921/tv3s_sandbox_cu128/ \
     bash -c "
         set -e
         mkdir -p ${RESULTS_DIR}/images
-        mkdir -p /local/${SLURM_JOB_ID}
-        trap 'rm -rf /local/${SLURM_JOB_ID}' EXIT
 
         echo '=== Step 1: Inference + mIoU ==='
         PYTHONPATH=/workspace/TV3S ./tools/dist_test.sh ${CONFIG} ${CHECKPOINT} 1 \
-            --eval mIoU --out ${RESULTS_DIR}/predictions.pkl --tmpdir /local/${SLURM_JOB_ID}
+            --eval mIoU --out ${RESULTS_DIR}/predictions.pkl --tmpdir ${TMPDIR}
 
         echo '=== Step 2: Convert predictions to PNG images ==='
         PYTHONPATH=/workspace/TV3S python3 tools/format_predictions.py \
