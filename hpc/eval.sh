@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=tv3s-eval
 #SBATCH --partition=main-gpu,itc-gpu
-#SBATCH --gpus=blackwell:1
+#SBATCH --gpus=1
 #SBATCH --time=4:00:00
 #SBATCH --mem=16G
 #SBATCH --cpus-per-task=4
