@@ -1,0 +1,110 @@
+FROM nvidia/cuda:12.8.0-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Basic build tools and libs
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        bzip2 \
+        git \
+        wget \
+        ffmpeg \
+        libglib2.0-0 \
+        libgl1 \
+        build-essential \
+        cmake \
+        ninja-build \
+        python3 \
+        python3-distutils \
+        python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install micromamba
+RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest \
+    | tar -xvj -C /usr/local/bin --strip-components=1 bin/micromamba
+
+ENV MAMBA_ROOT_PREFIX=/opt/micromamba
+ENV PATH=${MAMBA_ROOT_PREFIX}/bin:/usr/local/bin:${PATH}
+
+SHELL ["/bin/bash", "-lc"]
+
+# Create tv3s env
+RUN micromamba create -y -n tv3s python=3.10 && \
+    micromamba clean --all --yes
+
+# Install PyTorch (CUDA 12.8) into env
+RUN micromamba run -n tv3s pip install --upgrade pip && \
+    micromamba run -n tv3s pip install \
+        torch==2.7.0 \
+        torchvision==0.22.0 \
+        torchaudio==2.7.0 \
+        --index-url https://download.pytorch.org/whl/cu128
+
+# Core Python deps for TV3S
+# torch/torchvision/torchaudio are pinned to prevent accidental upgrades by transitive deps.
+RUN micromamba run -n tv3s pip install \
+        torch==2.7.0 \
+        torchvision==0.22.0 \
+        torchaudio==2.7.0 \
+        --index-url https://download.pytorch.org/whl/cu128 && \
+    micromamba run -n tv3s pip install \
+        timm==0.4.12 \
+        numpy==1.26.4 \
+        opencv-python==4.8.1.78 \
+        yapf==0.40.1 \
+        einops \
+        matplotlib \
+        ipython \
+        psutil \
+        fast-pytorch-kmeans \
+        mmsegmentation==0.11.0 \
+        mmengine==0.10.7 \
+        huggingface_hub \
+        transformers==4.57.6 \
+        ninja
+
+# Temporary clone of TV3S just for building 3rdparty deps
+RUN git clone https://github.com/Ashesham/TV3S.git /opt/TV3S_build && \
+    cd /opt/TV3S_build && \
+    git submodule update --init --recursive || true
+
+# Fix MMCV nms_rotated_cpu.cpp: AT_DISPATCH_FLOATING_TYPES and AT_ASSERTM use
+# deprecated Tensor.type() API removed in PyTorch 2.7; replace with scalar_type()
+RUN sed -i \
+    -e 's/AT_DISPATCH_FLOATING_TYPES(dets\.type()/AT_DISPATCH_FLOATING_TYPES(dets.scalar_type()/g' \
+    -e 's/dets\.type()\.is_cuda()/dets.is_cuda()/g' \
+    -e 's/scores\.type()\.is_cuda()/scores.is_cuda()/g' \
+    -e 's/dets\.type() == scores\.type()/dets.scalar_type() == scores.scalar_type()/g' \
+    /opt/TV3S_build/3rdparty/mmcv/mmcv/ops/csrc/pytorch/nms_rotated_cpu.cpp
+
+# Build MMCV with CUDA ops from the TV3S 3rdparty tree
+RUN micromamba run -n tv3s pip install "setuptools==69.5.1" wheel
+RUN cd /opt/TV3S_build/3rdparty/mmcv && \
+    MMCV_WITH_OPS=1 micromamba run -n tv3s \
+        python -m pip install -v -e . --no-build-isolation
+
+# Build causal-conv1d and mamba-ssm with --no-build-isolation so the build uses
+# our installed torch (2.7.0+cu128) instead of pip pulling the latest torch in
+# an isolated env (which would be a newer version compiled against a different CUDA).
+RUN micromamba run -n tv3s pip install --no-build-isolation causal-conv1d
+
+# Build mamba-ssm — latest 2.x; Mamba1 API is preserved so TV3S works unchanged.
+# No compatibility patches needed (those were specific to v1.0.0).
+RUN micromamba run -n tv3s pip install --no-build-isolation mamba-ssm
+
+# Fix numpy 1.24+ compatibility in mmseg (np.float/int/bool/complex removed)
+RUN sed -i 's/np\.float\b/float/g; s/np\.int\b/int/g; s/np\.complex\b/complex/g; s/np\.bool\b/bool/g' \
+    /opt/micromamba/envs/tv3s/lib/python3.10/site-packages/mmseg/core/evaluation/metrics.py
+
+# Make tv3s env the default on PATH
+ENV PATH=${MAMBA_ROOT_PREFIX}/envs/tv3s/bin:${PATH}
+
+# Ensure PyTorch's shared libs are visible to custom CUDA extensions
+ENV LD_LIBRARY_PATH=/opt/micromamba/envs/tv3s/lib/python3.10/site-packages/torch/lib:${LD_LIBRARY_PATH}
+
+# Your actual TV3S repo will be bind-mounted here at runtime
+WORKDIR /workspace/TV3S
+
+CMD ["micromamba", "run", "-n", "tv3s", "bash"]
