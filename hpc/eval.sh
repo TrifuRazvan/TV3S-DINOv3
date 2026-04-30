@@ -34,7 +34,7 @@ singularity exec --nv \
         mkdir -p ${RESULTS_DIR}/images
 
         echo '=== Step 1: Inference + mIoU ==='
-        PYTHONPATH=/workspace/TV3S ./tools/dist_test.sh ${CONFIG} ${CHECKPOINT} 1 \
+        PORT=${PORT} PYTHONPATH=/workspace/TV3S ./tools/dist_test.sh ${CONFIG} ${CHECKPOINT} 1 \
             --eval mIoU --out ${RESULTS_DIR}/predictions.pkl --tmpdir ${TMPDIR}
 
         echo '=== Step 2: Convert predictions to PNG images ==='
