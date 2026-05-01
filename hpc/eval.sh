@@ -13,9 +13,10 @@ export HTTP_PROXY=http://proxy.utwente.nl:3128
 export HTTPS_PROXY=http://proxy.utwente.nl:3128
 
 PORT=$((29500 + SLURM_JOB_ID % 1000))
-TMPDIR=/local/s2283921/${SLURM_JOB_ID}
+JOBDIR=/local/s2283921/${SLURM_JOB_ID}
+TMPDIR=${JOBDIR}/tmp
 mkdir -p ${TMPDIR}
-trap "rm -rf ${TMPDIR}" EXIT
+trap "rm -rf ${JOBDIR}" EXIT
 
 CONFIG=local_configs/dinov3/dinov3_hf_vits16_tv3s_frozen.480x480.vspw2.160k.py
 WORK_DIR=dinov3_vits16_tv3s_frozen_2sample_2gpu_iter160k_lr6e-5
@@ -26,7 +27,7 @@ singularity exec --nv \
     --bind /dev/shm:/dev/shm \
     --bind /home/s2283921/TV3S-DINOv3/upstream:/workspace/TV3S \
     --bind /home/s2283921/.cache/huggingface:/root/.cache/huggingface \
-    --bind ${TMPDIR}:${TMPDIR} \
+    --bind ${JOBDIR}:${JOBDIR} \
     --pwd /workspace/TV3S \
     /home/s2283921/tv3s_sandbox_cu128/ \
     bash -c "
