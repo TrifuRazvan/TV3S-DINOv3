@@ -14,9 +14,11 @@ export HTTPS_PROXY=http://proxy.utwente.nl:3128
 
 PORT=$((29500 + SLURM_JOB_ID % 1000))
 JOBDIR=/local/s2283921/${SLURM_JOB_ID}
-TMPDIR=${JOBDIR}/tmp
-mkdir -p ${TMPDIR}
+NPY_DIR=${JOBDIR}/npy
+COLLECT_DIR=${JOBDIR}/collect
+mkdir -p ${NPY_DIR} ${COLLECT_DIR}
 trap "rm -rf ${JOBDIR}" EXIT
+export TMPDIR=${NPY_DIR}
 
 CONFIG=local_configs/dinov3/dinov3_hf_vits16_tv3s_frozen.480x480.vspw2.160k.py
 WORK_DIR=dinov3_vits16_tv3s_frozen_2sample_2gpu_iter160k_lr6e-5
@@ -35,8 +37,8 @@ singularity exec --nv \
         mkdir -p ${RESULTS_DIR}/images
 
         echo '=== Step 1: Inference + mIoU ==='
-        PORT=${PORT} PYTHONPATH=/workspace/TV3S ./tools/dist_test.sh ${CONFIG} ${CHECKPOINT} 1 \
-            --eval mIoU --out ${RESULTS_DIR}/predictions.pkl --tmpdir ${TMPDIR}
+        PORT=${PORT} TMPDIR=${NPY_DIR} PYTHONPATH=/workspace/TV3S ./tools/dist_test.sh ${CONFIG} ${CHECKPOINT} 1 \
+            --eval mIoU --out ${RESULTS_DIR}/predictions.pkl --tmpdir ${COLLECT_DIR}
 
         echo '=== Step 2: Convert predictions to PNG images ==='
         PYTHONPATH=/workspace/TV3S python3 tools/format_predictions.py \
