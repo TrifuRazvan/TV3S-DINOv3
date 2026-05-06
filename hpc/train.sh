@@ -4,7 +4,6 @@
 #SBATCH --nodes=1
 #SBATCH --gpus=2
 #SBATCH --constraint=l40|l40s|a40|a100|rtx6000pro
-#SBATCH --exclude=hpc-node29
 #SBATCH --time=24:00:00
 #SBATCH --mem=64G
 #SBATCH --cpus-per-task=16

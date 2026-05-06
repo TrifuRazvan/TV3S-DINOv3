@@ -77,7 +77,17 @@ class DINOv3ConvNextBackboneHF(nn.Module):
     def _freeze_backbone(self):
         for param in self.backbone.parameters():
             param.requires_grad = False
+        self.backbone.eval()
         logger.info("DINOv3 ConvNext backbone frozen — only decode head will be trained")
+
+    def train(self, mode=True):
+        # Keep frozen backbone in eval mode even when MMSeg calls model.train().
+        # This prevents stochastic depth / dropout from running on the backbone,
+        # which causes CUDA illegal memory access on Blackwell (sm_120) GPUs.
+        super().train(mode)
+        if self.freeze_backbone:
+            self.backbone.eval()
+        return self
 
     def init_weights(self, pretrained=None):
         if self.freeze_backbone:
@@ -96,10 +106,13 @@ class DINOv3ConvNextBackboneHF(nn.Module):
                 (B, hidden_sizes[2], H//16, W//16)
                 (B, hidden_sizes[3], H//32, W//32)
         """
-        outputs = self.backbone(x, output_hidden_states=True)
+        if self.freeze_backbone:
+            with torch.no_grad():
+                outputs = self.backbone(x, output_hidden_states=True)
+        else:
+            outputs = self.backbone(x, output_hidden_states=True)
         # hidden_states[0] = input pixel_values; [1..4] = after each stage.
-        # ConvNeXt may output channels-last (NHWC) non-contiguous tensors; make
-        # them contiguous so downstream CUDA kernels (e.g. SyncBN) don't crash.
+        # ConvNeXt uses channels-last (NHWC) layout; make contiguous for downstream kernels.
         return [f.contiguous() for f in outputs.hidden_states[1:5]]
 
 
