@@ -25,4 +25,4 @@ singularity exec --nv \
     --bind /home/s2283921/.cache/huggingface:/root/.cache/huggingface \
     --pwd /workspace/TV3S \
     /home/s2283921/tv3s_sandbox_cu128/ \
-    bash -c "PORT=${PORT} NCCL_P2P_DISABLE=1 PYTHONPATH=/workspace/TV3S ./tools/dist_train.sh ${CONFIG} 2 --work-dir work_dirs/${WORK_DIR}"
+    bash -c "PORT=${PORT} NCCL_P2P_DISABLE=1 NCCL_SHM_DISABLE=1 PYTHONPATH=/workspace/TV3S ./tools/dist_train.sh ${CONFIG} 2 --work-dir work_dirs/${WORK_DIR}"
