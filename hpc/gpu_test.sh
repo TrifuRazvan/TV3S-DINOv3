@@ -6,6 +6,8 @@
 #SBATCH --time=00:05:00
 #SBATCH --output=hpc/logs/gpu_test_%j.log
 
+module load singularity/3.9.5
+
 echo "=== host nvidia-smi ==="
 nvidia-smi
 
