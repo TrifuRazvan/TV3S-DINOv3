@@ -14,6 +14,26 @@ from mmcv.utils import TORCH_VERSION, digit_version
 from .scatter_gather import scatter_kwargs
 
 
+def _conv_pre_hook(module, inputs):
+    """Make Conv2d input contiguous (NCHW) before forward."""
+    return (inputs[0].contiguous(),) if not inputs[0].is_contiguous() else inputs
+
+
+def _conv_output_hook(module, inputs, output):
+    """Register a backward hook on the Conv2d output tensor.
+
+    This fires when dy arrives at the Conv2d backward node — BEFORE cuDNN
+    computes dw = conv_backward_weight(x, dy). Making dy contiguous here
+    ensures cuDNN uses an NCHW algorithm for dw, so the weight gradient is
+    always contiguous when DDP copies it into the NCCL bucket.
+    """
+    if output.requires_grad:
+        output.register_hook(
+            lambda g: g.contiguous() if not g.is_contiguous() else g
+        )
+    return output
+
+
 class MMDistributedDataParallel(DistributedDataParallel):
     """The DDP module that supports DataContainer.
 
@@ -26,18 +46,20 @@ class MMDistributedDataParallel(DistributedDataParallel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Forward pre-hook on every Conv2d: make the input contiguous before the
-        # forward pass so weight gradients are always channels-first. This is
-        # upstream of DDP's C++ AccumulateGrad hooks (which copy grads into NCCL
-        # buckets before any Python register_hook can run), so it actually prevents
-        # the non-contiguous grad from ever being created — fixing the illegal
-        # memory access crash on Blackwell (sm_120) during 2-GPU allreduce.
+        # Blackwell (sm_120) crash fix: cuDNN picks an NHWC kernel if EITHER
+        # the Conv2d input (x) OR the output gradient (dy) is channels-last,
+        # producing a non-contiguous weight gradient. DDP's C++ AccumulateGrad
+        # hook copies that gradient into the NCCL bucket before any Python
+        # param.register_hook can fix it — causing an illegal memory access.
+        #
+        # Two-part fix:
+        #   pre-hook:     make x contiguous before the forward pass
+        #   output hook:  make dy contiguous before conv_backward_weight(x, dy)
+        #                 (output tensor hooks fire before AccumulateGrad)
         for m in self.module.modules():
             if isinstance(m, torch.nn.Conv2d):
-                m.register_forward_pre_hook(
-                    lambda mod, inputs: (inputs[0].contiguous(),)
-                    if not inputs[0].is_contiguous() else inputs
-                )
+                m.register_forward_pre_hook(_conv_pre_hook)
+                m.register_forward_hook(_conv_output_hook)
 
     def to_kwargs(self, inputs, kwargs, device_id):
         # Use `self.to_kwargs` instead of `self.scatter` in pytorch1.8
