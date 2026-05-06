@@ -26,14 +26,17 @@ class MMDistributedDataParallel(DistributedDataParallel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # On Blackwell (sm_120) GPUs, DDP's internal grad.to(bucket) copy
-        # crashes with an illegal memory access when the gradient is non-contiguous
-        # (e.g. channels-last from ConvNeXt). Register a hook on every trainable
-        # parameter to force contiguous gradients before the allreduce.
-        for param in self.parameters():
-            if param.requires_grad:
-                param.register_hook(
-                    lambda grad: grad.contiguous() if not grad.is_contiguous() else grad
+        # Forward pre-hook on every Conv2d: make the input contiguous before the
+        # forward pass so weight gradients are always channels-first. This is
+        # upstream of DDP's C++ AccumulateGrad hooks (which copy grads into NCCL
+        # buckets before any Python register_hook can run), so it actually prevents
+        # the non-contiguous grad from ever being created — fixing the illegal
+        # memory access crash on Blackwell (sm_120) during 2-GPU allreduce.
+        for m in self.module.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                m.register_forward_pre_hook(
+                    lambda mod, inputs: (inputs[0].contiguous(),)
+                    if not inputs[0].is_contiguous() else inputs
                 )
 
     def to_kwargs(self, inputs, kwargs, device_id):
