@@ -24,6 +24,18 @@ class MMDistributedDataParallel(DistributedDataParallel):
     - It implement two APIs ``train_step()`` and ``val_step()``.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # On Blackwell (sm_120) GPUs, DDP's internal grad.to(bucket) copy
+        # crashes with an illegal memory access when the gradient is non-contiguous
+        # (e.g. channels-last from ConvNeXt). Register a hook on every trainable
+        # parameter to force contiguous gradients before the allreduce.
+        for param in self.parameters():
+            if param.requires_grad:
+                param.register_hook(
+                    lambda grad: grad.contiguous() if not grad.is_contiguous() else grad
+                )
+
     def to_kwargs(self, inputs, kwargs, device_id):
         # Use `self.to_kwargs` instead of `self.scatter` in pytorch1.8
         # to move all tensors to device_id
