@@ -97,8 +97,10 @@ class DINOv3ConvNextBackboneHF(nn.Module):
                 (B, hidden_sizes[3], H//32, W//32)
         """
         outputs = self.backbone(x, output_hidden_states=True)
-        # hidden_states[0] = input pixel_values; [1..4] = after each stage
-        return list(outputs.hidden_states[1:5])
+        # hidden_states[0] = input pixel_values; [1..4] = after each stage.
+        # ConvNeXt may output channels-last (NHWC) non-contiguous tensors; make
+        # them contiguous so downstream CUDA kernels (e.g. SyncBN) don't crash.
+        return [f.contiguous() for f in outputs.hidden_states[1:5]]
 
 
 __all__ = ['DINOv3ConvNextBackboneHF']
