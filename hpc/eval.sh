@@ -20,8 +20,10 @@ mkdir -p ${NPY_DIR} ${COLLECT_DIR}
 trap "rm -rf ${JOBDIR}" EXIT
 export TMPDIR=${NPY_DIR}
 
-CONFIG=local_configs/dinov3/dinov3_hf_vits16_tv3s_frozen.480x480.vspw2.160k.py
-WORK_DIR=dinov3_vits16_tv3s_frozen_2sample_2gpu_iter160k_lr6e-5
+# Override CONFIG and WORK_DIR by passing them as env vars before sbatch:
+#   CONFIG=... WORK_DIR=... sbatch hpc/eval.sh
+CONFIG=${CONFIG:-local_configs/dinov3/dinov3_hf_convnext_base_tv3s_frozen.480x480.vspw2.160k.py}
+WORK_DIR=${WORK_DIR:-dinov3_convnext_base_tv3s_frozen_2sample_2gpu_iter160k_lr6e-5}
 CHECKPOINT=work_dirs/${WORK_DIR}/iter_160000.pth
 RESULTS_DIR=results/${WORK_DIR}
 
