@@ -3,7 +3,6 @@ upstream/data/
 upstream/pretrained/
 upstream/work_dirs/
 upstream/results/
-upstream/plots/
 
 # Model checkpoints and predictions
 *.pth
