@@ -45,8 +45,6 @@ def preprocess(bgr_img):
 def build_model(config_path, checkpoint_path, device):
     cfg = mmcv.Config.fromfile(config_path)
     cfg.model.pretrained = None
-    # Skip HF weight download — checkpoint provides all weights
-    cfg.model.backbone.pretrained = False
 
     # Set test-time settings identical to tools/test.py (mode 0 = Normal)
     if hasattr(cfg.model.decode_head, 'decoder_params'):
