@@ -41,6 +41,8 @@ singularity exec --nv \
     /home/s2283921/tv3s_sandbox_cu128/ \
     bash -c "
         set -e
+        export TRANSFORMERS_OFFLINE=1
+        export HF_DATASETS_OFFLINE=1
         PYTHONPATH=/workspace/TV3S python3 tools/oxford_spires/infer_sequence.py \
             --config     ${CONFIG} \
             --checkpoint ${CHECKPOINT} \
