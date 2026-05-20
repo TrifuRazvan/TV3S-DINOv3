@@ -1,6 +1,6 @@
 #!/bin/bash
 # Submit Oxford Spires inference jobs for all trained models.
-# Run from ~/TV3S-DINOv3 on the HPC head node.
+# Run from ~/TV3S-DINOv3/upstream on the HPC head node.
 #
 # Usage:
 #   bash hpc/submit_oxford_spires_all.sh
@@ -14,9 +14,8 @@ BASE=local_configs/dinov3
 submit() {
     local config=$1
     local work_dir=$2
-    local checkpoint=${3:-work_dirs/${work_dir}/iter_160000.pth}
     echo "Submitting: ${work_dir}"
-    CONFIG=${config} WORK_DIR=${work_dir} CHECKPOINT=${checkpoint} \
+    CONFIG=${config} WORK_DIR=${work_dir} \
         SEQUENCE=${SEQUENCE} RESOLUTION=${RESOLUTION} \
         sbatch hpc/oxford_spires_infer.sh
 }
@@ -60,10 +59,5 @@ submit ${BASE}/dinov3_hf_convnext_base_tv3s.480x480.vspw2.160k.py \
 
 submit ${BASE}/dinov3_hf_convnext_base_tv3s_lpft.480x480.vspw2.160k.py \
        dinov3_convnext_base_tv3s_lpft_2sample_2gpu_iter160k_lr3e-5
-
-# --- TV3S baseline (MiT-B1) ---
-submit local_configs/tv3s/B1/tv3s.b1.480x480.vspw2.160k.py \
-       tv3s_b1_baseline \
-       resources/checkpoints/B1/iter_160000.pth
 
 echo "All jobs submitted. Check with: squeue -u s2283921"
