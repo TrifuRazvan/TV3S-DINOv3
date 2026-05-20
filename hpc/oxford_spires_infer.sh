@@ -24,7 +24,7 @@ export HTTPS_PROXY=http://proxy.utwente.nl:3128
 
 CONFIG=${CONFIG:-local_configs/dinov3/dinov3_hf_vits16_tv3s_frozen.480x480.vspw2.160k.py}
 WORK_DIR=${WORK_DIR:-dinov3_vits16_tv3s_frozen_2sample_iter160k_lr6e-5}
-CHECKPOINT=work_dirs/${WORK_DIR}/latest.pth
+CHECKPOINT=${CHECKPOINT:-work_dirs/${WORK_DIR}/iter_160000.pth}
 SEQUENCE=${SEQUENCE:-christ-church-02}
 RESOLUTION=${RESOLUTION:-480x480}
 
