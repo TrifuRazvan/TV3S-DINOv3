@@ -13,30 +13,52 @@ export HTTP_PROXY=http://proxy.utwente.nl:3128
 export HTTPS_PROXY=http://proxy.utwente.nl:3128
 
 PORT=$((29500 + SLURM_JOB_ID % 1000))
-JOBDIR=/local/s2283921/${SLURM_JOB_ID}
-NPY_DIR=${JOBDIR}/npy
-COLLECT_DIR=${JOBDIR}/collect
-mkdir -p ${NPY_DIR} ${COLLECT_DIR}
-trap "rm -rf ${JOBDIR}" EXIT
-export TMPDIR=${NPY_DIR}
 
 # Override CONFIG and WORK_DIR by passing them as env vars before sbatch:
 #   CONFIG=... WORK_DIR=... sbatch hpc/eval.sh
 CONFIG=${CONFIG:-local_configs/dinov3/dinov3_hf_convnext_base_tv3s_frozen.480x480.vspw2.160k.py}
 WORK_DIR=${WORK_DIR:-dinov3_convnext_base_tv3s_frozen_2sample_2gpu_iter160k_lr6e-5}
 CHECKPOINT=work_dirs/${WORK_DIR}/iter_160000.pth
+
+HOME_BASE=/home/s2283921/TV3S-DINOv3/upstream
 RESULTS_DIR=results/${WORK_DIR}
+
+WORKDIR=${SLURM_TMPDIR:-/tmp/s2283921/${SLURM_JOB_ID}}
+mkdir -p ${WORKDIR}
+
+# Intermediate inference files go on local disk
+NPY_DIR=${WORKDIR}/npy
+COLLECT_DIR=${WORKDIR}/collect
+mkdir -p ${NPY_DIR} ${COLLECT_DIR}
+export TMPDIR=${NPY_DIR}
+
+echo "=== Staging data to local disk (${WORKDIR}) ==="
+
+# HF model cache
+mkdir -p ${WORKDIR}/hf_cache
+cp -r /home/s2283921/.cache/huggingface/. ${WORKDIR}/hf_cache/
+
+# Checkpoint
+mkdir -p ${WORKDIR}/$(dirname ${CHECKPOINT})
+cp ${HOME_BASE}/${CHECKPOINT} ${WORKDIR}/${CHECKPOINT}
+
+# Local results dir (PNG writes go here, not NFS)
+mkdir -p ${WORKDIR}/${RESULTS_DIR}/images
+
+echo "=== Running eval ==="
 
 singularity exec --nv \
     --bind /dev/shm:/dev/shm \
-    --bind /home/s2283921/TV3S-DINOv3/upstream:/workspace/TV3S \
-    --bind /home/s2283921/.cache/huggingface:/root/.cache/huggingface \
-    --bind ${JOBDIR}:${JOBDIR} \
+    --bind ${HOME_BASE}:/workspace/TV3S \
+    --bind ${WORKDIR}/$(dirname ${CHECKPOINT}):/workspace/TV3S/$(dirname ${CHECKPOINT}) \
+    --bind ${WORKDIR}/${RESULTS_DIR}:/workspace/TV3S/${RESULTS_DIR} \
+    --bind ${WORKDIR}/hf_cache:/root/.cache/huggingface \
+    --bind ${WORKDIR}:${WORKDIR} \
     --pwd /workspace/TV3S \
     /home/s2283921/tv3s_sandbox_cu128/ \
     bash -c "
         set -e
-        mkdir -p ${RESULTS_DIR}/images
+        export PYTHONUNBUFFERED=1
 
         echo '=== Step 1: Inference + mIoU ==='
         PORT=${PORT} TMPDIR=${NPY_DIR} PYTHONPATH=/workspace/TV3S ./tools/dist_test.sh ${CONFIG} ${CHECKPOINT} 1 \
@@ -50,3 +72,9 @@ singularity exec --nv \
         PYTHONPATH=/workspace/TV3S python3 tools/VC_perclip.py \
             ${RESULTS_DIR}/images/result_submission data/vspw/VSPW_480p
     "
+
+echo "=== Copying results back to /home ==="
+mkdir -p ${HOME_BASE}/${RESULTS_DIR}
+cp -r ${WORKDIR}/${RESULTS_DIR}/. ${HOME_BASE}/${RESULTS_DIR}/
+
+echo "=== Done ==="
