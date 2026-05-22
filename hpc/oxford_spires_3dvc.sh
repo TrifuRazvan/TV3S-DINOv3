@@ -4,7 +4,7 @@
 #SBATCH --time=1:00:00
 #SBATCH --mem=8G
 #SBATCH --cpus-per-task=4
-#SBATCH --output=hpc/logs/oxford_spires/%x_%j.log
+#SBATCH --output=hpc/logs/oxford_spires_3dvc/%x_%j.log
 
 # Usage:
 #   WORK_DIR=... SEQUENCE=... sbatch hpc/oxford_spires_3dvc.sh
@@ -33,7 +33,7 @@ TIMESTAMPS=data/oxford_spires/${SEQUENCE}/cam0_${RESOLUTION}/timestamps.txt
 K_FILE=data/oxford_spires/${SEQUENCE}/cam0_${RESOLUTION}/K_new.txt
 OUT_JSON=results/oxford_spires/${SEQUENCE}/${WORK_DIR}/3dvc_${RESOLUTION}.json
 
-mkdir -p hpc/logs/oxford_spires
+mkdir -p hpc/logs/oxford_spires_3dvc
 
 singularity exec \
     --bind /dev/shm:/dev/shm \

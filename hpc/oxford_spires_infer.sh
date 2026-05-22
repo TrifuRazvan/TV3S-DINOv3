@@ -32,8 +32,16 @@ HOME_BASE=/home/s2283921/TV3S-DINOv3/upstream
 IMAGES_DIR=data/oxford_spires/${SEQUENCE}/cam0_${RESOLUTION}
 OUT_DIR=results/oxford_spires/${SEQUENCE}/${WORK_DIR}/segs_${RESOLUTION}
 
-WORKDIR=${SLURM_TMPDIR:-/tmp/s2283921/${SLURM_JOB_ID}}
+WORKDIR="/local/${SLURM_JOB_ID}"
 mkdir -p ${WORKDIR}
+
+cleanup_node() {
+    if [ -d "$WORKDIR" ]; then
+        echo "Cleaning up $WORKDIR"
+        rm -rf "$WORKDIR"
+    fi
+}
+trap cleanup_node EXIT SIGINT SIGTERM
 
 mkdir -p hpc/logs/oxford_spires
 

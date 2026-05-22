@@ -23,8 +23,16 @@ CHECKPOINT=work_dirs/${WORK_DIR}/iter_160000.pth
 HOME_BASE=/home/s2283921/TV3S-DINOv3/upstream
 RESULTS_DIR=results/${WORK_DIR}
 
-WORKDIR=${SLURM_TMPDIR:-/tmp/s2283921/${SLURM_JOB_ID}}
+WORKDIR="/local/${SLURM_JOB_ID}"
 mkdir -p ${WORKDIR}
+
+cleanup_node() {
+    if [ -d "$WORKDIR" ]; then
+        echo "Cleaning up $WORKDIR"
+        rm -rf "$WORKDIR"
+    fi
+}
+trap cleanup_node EXIT SIGINT SIGTERM
 
 # Intermediate inference files go on local disk
 NPY_DIR=${WORKDIR}/npy
